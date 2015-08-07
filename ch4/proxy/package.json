@@ -1,0 +1,16 @@
+{
+  "name": "websocket-ch4-custom",
+  "version": "0.0.1",
+  "description": "Chapter 4 Custom Chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Andrew Lombardi <andrew@mysticcoders.com>",
+  "dependencies": {
+    "amqplib": "^0.2.0",
+    "node-uuid": "^1.4.1",
+    "ws": "^0.4.31",
+    "amqp": "~0.2.0"
+  }
+}

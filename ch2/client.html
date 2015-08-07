@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Stock Chart over WebSocket</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+<style type="text/css">
+html, body {
+  height: 100%;
+}
+</style>
+
+<script>
+
+$(function() {
+
+    var ws = new WebSocket("ws://localhost:8181");
+
+    var stock_request = {
+        "stocks": ["AAPL", "MSFT", "AMZN", "GOOG", "YHOO"]
+    };
+
+    var stocks = {
+        "AAPL": 0,
+        "MSFT": 0,
+        "AMZN": 0,
+        "GOOG": 0,
+        "YHOO": 0
+    }
+
+    $('#AAPL span').toggleClass('label-success');
+    ws.onopen = function(e) {
+      console.log('Connection to server opened');
+      ws.send(JSON.stringify(stock_request));
+    }
+
+    var changeStockEntry = function(symbol, originalValue, newValue) {
+        var valElem = $('#' + symbol + ' span');
+        valElem.html(newValue.toFixed(2));
+        if(newValue < originalValue) {
+            valElem.addClass('label-danger');
+            valElem.removeClass('label-success');
+        } else if(newValue > originalValue) {
+            valElem.addClass('label-success');
+            valElem.removeClass('label-danger');
+        }
+    }
+
+    ws.onmessage = function(e) {
+      var stocksData = JSON.parse(e.data);
+      for(var symbol in stocksData) {
+          if(stocksData.hasOwnProperty(symbol)) {
+              changeStockEntry(symbol, stocksData[symbol], stocks[symbol]);
+              stocks[symbol] = stocksData[symbol];
+          }
+      }
+    }
+    ws.onclose = function(e) {
+      console.log("Connection closed");
+      for(var symbol in stocks) {
+          if(stocks.hasOwnProperty(symbol)) {
+              stocks[symbol] = 0;
+          }
+      }
+
+    }
+
+    function disconnect() {
+      ws.close();
+    }
+});
+
+</script>
+
+</head>
+<body lang="en">
+    <div class="vertical-center">
+        <div class="container">
+
+            <h1>Stock Chart over WebSocket</h1>
+            <table class="table" id="stockTable">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody id="stockRows">
+                <tr>
+                  <td><h3>AAPL</h3></td>
+                  <td id="AAPL"><h3><span class="label label-default">95.00</span></h3></td>
+                </tr>
+                <tr>
+                  <td><h3>MSFT</h3></td>
+                  <td id="MSFT"><h3><span class="label label-default">50.00</span></h3></td>
+                </tr>
+                <tr>
+                  <td><h3>AMZN</h3></td>
+                  <td id="AMZN"><h3><span class="label label-default">300.00</span></h3></td>
+                </tr>
+                <tr>
+                  <td><h3>GOOG</h3></td>
+                  <td id="GOOG"><h3><span class="label label-default">550.00</span></h3></td>
+                </tr>
+                <tr>
+                  <td><h3>YHOO</h3></td>
+                  <td id="YHOO"><h3><span class="label label-default">35.00</span></h3></td>
+                </tr>
+              </tbody>
+            </table>
+
+          </div>
+    </div>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</body></html>

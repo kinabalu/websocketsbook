@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bi-directional Socket.io Chat Demo</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io.connect('http://localhost:8181');
+        var nickname = "";
+
+        socket.on('connect', function() {
+            console.log('Connection to server opened');
+        });
+
+        function appendLog(nickname, message) {
+            var messages = document.getElementById('messages');
+            var messageElem = document.createElement("li");
+            var message_text = "[" + nickname + "] - " + message;
+            messageElem.innerHTML = message_text;
+            messages.appendChild(messageElem);
+        }            
+
+        socket.on('message', function(data) {
+            appendLog(data.nickname, data.message);
+            console.log("ID: [%s] = %s", data.id, data.message);
+        });
+
+        socket.on('nickname', function(data) {
+            appendLog(data.nickname, data.message);
+        })
+
+        socket.on('disconnect', function() {
+            appendLog('Connection closed');
+            console.log('Connection closed');
+        })
+
+        function sendMessage() {
+            var messageField = document.getElementById('message');
+            var message = messageField.value;
+            if(message.indexOf('/nick') === 0) {
+                var nickname_array = message.split(' ');
+                if(nickname_array.length >= 2) {
+                    socket.emit('nickname', {
+                        nickname: nickname_array[1]
+                    });
+                }
+            } else {
+                socket.send(messageField.value);
+            }
+            messageField.value = '';
+            messageField.focus();
+        }
+
+        function disconnect() {
+            socket.disconnect();
+        }
+    </script>
+
+    <link href='/style.css' type='text/css' rel='stylesheet'>
+  </head>
+  <body>
+  
+    <ul id="messages">
+
+    </ul>
+
+    <form id="chat_form" onsubmit="sendMessage(); return false;">
+        <input type="text" id="message" name="message" id="message" 
+          placeholder="Type text to echo in here" value="" autofocus/>
+        <input type="button" id="send" value="Send!" 
+          onclick="sendMessage();" />
+        <!-- <input type="button" value="Disconnect" onclick="disconnect();" /> -->
+  </form>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+	"framework": "qunit",
+	"launch_in_ci": ["PhantomJS"],
+	"src_files": [
+		"dist/**/*.js",
+		"src/helpers/**/*.js",
+		"tests/**/*-test.js"
+	],
+	"src_files_ignore": [
+		"dist/**/*.min.js",
+		"src/helpers/delay.js"
+	],
+	"phantomjs_debug_port_disabled": 8007
+}

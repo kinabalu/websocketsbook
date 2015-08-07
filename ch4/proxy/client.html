@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<title>STOMP over WebSocket Stocks</title>
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style type="text/css">
+html, body {
+  height: 100%;
+}
+
+tbody#stockRows a {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+    </style>
+
+    <script src="stomp_helper.js" type="text/javascript"></script>
+    <script>
+
+        var stocks = {};
+
+        Object.size = function(obj) {
+            var size = 0, key;
+            for (key in obj) {
+                if (obj.hasOwnProperty(key)) size++;
+            }
+            return size;
+        };
+
+        var subscribe = function(symbol) {
+            // first check to see if the symbol is already in the list            
+            if(stocks.hasOwnProperty(symbol)) {
+                alert('You already added the ' + symbol + ' symbol');
+                return;
+            }
+
+            stocks[symbol] = 0.0;
+            Stomp.send_frame(ws, {
+                "command": "SUBSCRIBE",
+                "headers": {
+                    "destination": "/queue/stocks." + symbol,
+                },
+                content: ""
+            });
+            var tbody = document.getElementById('stockRows');
+
+            var newRow = tbody.insertRow(tbody.rows.length);
+            newRow.id = symbol + '_row';
+            newRow.innerHTML = '<td><h3>' + symbol + '</h3></td>' +
+                               '<td id="' + symbol + '">' + 
+                               '<h3><span class="label label-default">Retrieving..</span></h3>' +
+                               '</td>' +
+                               '<td>' +
+                               '<a href="#" onclick="unsubscribe(\'' + symbol +
+                                '\');" class="btn btn-danger">Remove</a></td>';
+
+            if(!$('#norows').hasClass('hidden')) {
+                $('#norows').addClass('hidden');
+            }
+
+            $('#symbol').val('');
+            $('#symbol').focus();
+        }
+
+        var unsubscribe = function(symbol) {
+            Stomp.send_frame(ws, {
+                "command": "UNSUBSCRIBE",
+                "headers": {
+                    "destination": "/queue/stocks." + symbol,
+                },
+                content: ""
+            });
+            $('#' + symbol + '_row').remove();
+
+            delete stocks[symbol];
+
+            console.dir(stocks);
+            if(Object.size(stocks) === 0) {
+                $('#norows').removeClass('hidden');
+            }
+        }
+
+        var onOpenHandler = function(e) {
+            console.log('Connection to server opened');
+            Stomp.send_frame(ws, {
+                "command": "CONNECT",
+                "headers": {
+                    login: "websockets",
+                    passcode: "rabbitmq"
+                },
+                content: ""
+            });
+        }
+
+
+        var updateStockPrice = function(symbol, originalValue, newValue) {
+            var valElem = $('#' + symbol + ' span');
+            valElem.html(newValue.toFixed(2));
+            var lostValue = (newValue < originalValue);
+            valElem.addClass((lostValue ? 'label-danger' : 'label-success'))
+            valElem.removeClass((lostValue ? 'label-success' : 'label-danger'))
+        }
+
+        var onMessageHandler = function(e) {
+            frame = Stomp.process_frame(e.data);
+            switch(frame['command']) {
+                case "CONNECTED":
+                    console.log("STOMP connection achieved.");
+                    statusChange(true);
+                    break;
+                case "MESSAGE":
+                    var destination = frame['headers']['destination'];
+                    var content;
+                    try {                        
+                        content = JSON.parse(frame['content']);
+                    } catch(ex) {
+                        console.log("exception:", ex);
+                    }
+                    var sub_stock = destination.substring(destination.indexOf('.') + 1, destination.length);
+                    updateStockPrice(sub_stock, stocks[sub_stock], content.price);
+                    stocks[sub_stock] = content.price;
+                    break;
+            }
+        }
+
+        var onCloseHandler = function(e) {
+            statusChange(false);            
+        }
+
+        var ws;
+
+        var connect = function() {
+            if(!ws || ws.readyState !== 1) {
+                console.log("connect going: " + ws);
+                ws = new WebSocket("ws://localhost:8181", "v10.stomp");
+                ws.addEventListener('message', onMessageHandler);
+                ws.addEventListener('open', onOpenHandler);
+                ws.addEventListener('close', onCloseHandler);
+            }
+        }
+
+        connect();
+
+        var online = false;
+
+        var statusChange = function(newStatus) {
+            $('#connection').html((newStatus ? 'Online' : 'Offline'));
+            $('#connection').addClass((newStatus ? 'btn-success' : 'btn-danger'));
+            $('#connection').removeClass((newStatus ? 'btn-danger' : 'btn-success'));
+            online = newStatus;
+        }
+
+        var switchOnlineStatus = function() {
+            if(online) logoff(); else connect();
+        }
+
+        var logoff = function() {
+            statusChange(false);
+
+            Stomp.send_frame(ws, {
+                "command": "DISCONNECT"
+                }
+            );
+            return false;
+        }
+    </script>    
+</head>
+<body lang="en">
+    <div class="vertical-center">
+    <div class="container">
+
+        <div class="well">
+
+            <form role="form" class="form-inline" id="add_form" onsubmit="subscribe($('#symbol').val()); return false;">
+                <div class="form-group">
+                    <input class="form-control" type="text" id="symbol" name="symbol" placeholder="Stock symbol: i.e. AAPL" value="" autofocus />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Add</button>
+
+            </form>
+
+        </div>
+
+            <table class="table" id="stockTable">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="stockRows">
+                <tr id="norows">
+                    <td colspan="3">
+                    No stocks found, add one above
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        <div class="text-right">
+            <p>
+                <a id="connection" class="btn btn-danger" href="#" onclick="switchOnlineStatus();">Offline</a>
+            </p>
+        </div>
+    </div>
+    </div>
+
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</body></html>

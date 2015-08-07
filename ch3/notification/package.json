@@ -1,0 +1,17 @@
+{
+  "name": "websocket-notification",
+  "version": "0.0.0",
+  "description": "",
+  "main": "server.js",
+  "dependencies": {
+    "ws": "^0.4.32",
+    "node-uuid": "^1.4.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Andrew Lombardi <andrew@mysticcoders.com>",
+  "license": "ISC"
+}

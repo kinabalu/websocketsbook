@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bi-directional SockJS Chat Demo</title>
+    <script src="http://cdn.sockjs.org/sockjs-0.3.min.js"></script>
+    <script>
+        var sockjs = new SockJS("http://localhost:8181/chat");
+        var nickname = "";
+        sockjs.onopen = function(e) {
+          console.log('Connection to server opened');
+        }
+        function appendLog(nickname, message) {
+          var messages = document.getElementById('messages');
+          var messageElem = document.createElement("li");
+          var message_text = "[" + nickname + "] - " + message;
+          messageElem.innerHTML = message_text;
+          messages.appendChild(messageElem);
+        }            
+        sockjs.onmessage = function(e) {
+          var data = JSON.parse(e.data);
+          nickname = data.nickname;
+          appendLog(data.nickname, data.message);
+          console.log("ID: [%s] = %s", data.id, data.message);
+        }
+        sockjs.onclose = function(e) {
+          appendLog("Connection closed");
+          console.log("Connection closed");
+        }
+        function sendMessage() {
+          var messageField = document.getElementById('message');
+           sockjs.send(messageField.value);
+           messageField.value = '';
+           messageField.focus();
+        }
+        function disconnect() {
+          sockjs.close();
+        }
+    </script>
+
+    <link href='/style.css' type='text/css' rel='stylesheet'>
+  </head>
+  <body>
+  
+    <ul id="messages">
+
+    </ul>
+
+    <form id="chat_form" onsubmit="sendMessage(); return false;">
+        <input type="text" id="message" name="message" id="message" 
+          placeholder="Type text to echo in here" value="" autofocus/>
+        <input type="button" id="send" value="Send!" 
+          onclick="sendMessage();" />
+        <!-- <input type="button" value="Disconnect" onclick="disconnect();" /> -->
+  </form>
+  </body>
+</html>

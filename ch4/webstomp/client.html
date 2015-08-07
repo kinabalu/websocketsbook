@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html><head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  <script src="http://cdn.sockjs.org/sockjs-0.3.min.js"></script>
+  <script src="stomp.min.js"></script>
+  <title>Echo Server</title>
+</head>
+<body lang="en">
+    <h1>Web Stomp Echo Server</h1>
+
+    <ul id="messages">
+
+    </ul>
+
+    <form onsubmit="send_message(); return false;">
+        <input type="text" name="message" style="width: 200px;" id="message" placeholder="Type text to echo in here" value="" autofocus />
+        <input type="button" value="Send!" onclick="send_message();" />
+
+    </form>
+
+    <script>
+
+        var ws = new SockJS('http://localhost:15674/stomp');
+        var client = Stomp.over(ws);
+
+        // SockJS does not support heart-beat: disable heart-beats
+        client.heartbeat.outgoing = 0;
+        client.heartbeat.incoming = 0;
+
+        client.debug = function(str) {
+            console.log(str);
+        }
+
+        var send_message = function(data) {
+            client.send("/topic/echo", {}, document.getElementById('message').value);
+        };
+
+        var connect_callback = function(x) {
+            id = client.subscribe("/topic/echo", function(message) {
+                append_log(message.body);
+                console.log(JSON.stringify(message.body));
+
+            });
+        };
+
+        var error_callback = function(error) {
+            console.log(error.headers.message);
+        };
+
+        function append_log(message) {
+            var messages = document.getElementById('messages');
+            var messageElem = document.createElement("li");
+            messageElem.innerHTML = message;
+            messages.appendChild(messageElem);
+        }
+
+        client.connect('websockets', 'rabbitmq', connect_callback, error_callback, '/');
+
+    </script>
+</body></html>

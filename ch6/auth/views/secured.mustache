@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>WebSocket Secure Example</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script type="text/javascript">
+
+$(function() {
+
+	var ws = new WebSocket("wss://localhost:8443");
+
+	ws.onopen = function(e) {
+		console.log('Connection to server opened');
+	}
+});
+</script>
+</head>
+<body>
+
+</body>
+</html>

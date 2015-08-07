@@ -1,0 +1,17 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby ts=2 sw=2 expandtab:
+
+Vagrant.configure("2") do |config|
+    config.vm.hostname = "websockets-mq"
+    config.vm.box = "precise64"
+    config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/precise/current/precise-server-cloudimg-amd64-vagrant-disk1.box"
+
+    config.vm.network :forwarded_port, guest: 5672, host: 5672
+    config.vm.network :forwarded_port, guest: 15672, host: 15672
+
+    config.vm.provision "shell", path: "setup_rabbitmq.sh"
+
+    config.vm.provider :virtualbox do |v|
+        v.name = "websockets-mq"
+    end
+end

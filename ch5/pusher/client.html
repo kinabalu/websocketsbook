@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Bi-directional Pusher Chat Demo</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://js.pusher.com/2.1/pusher.min.js"></script>
+    <script>
+        var pusher = new Pusher('1767b3a900a9608560b1');    
+        var nickname = "";
+
+        var channel = pusher.subscribe('chat');
+
+        var id;
+
+        pusher.connection.bind('connected', function() {            
+            console.log('Connection to server opened');
+            $.ajax({
+                url: 'http://localhost:8181/login',
+                type: 'POST',
+                dataType: 'json',
+                data: JSON.stringify({}),
+                contentType: "application/json",                    
+                complete: function(xhr, status) {
+                    if(xhr.status === 200) {
+                        console.log("message sent");
+                    }
+                },
+                success: function(result) {
+                    appendLog('*', result.nickname + " connected");
+
+                    id = result.id;
+                }
+            })
+        });
+
+        function appendLog(nickname, message) {
+          var messages = document.getElementById('messages');
+          var messageElem = document.createElement("li");
+          var preface_label;
+          if(nickname==='*') {
+              preface_label = "<span class=\"label label-info\">*</span>";
+          } else {
+              preface_label = "<span class=\"label label-success\">" + nickname + "</span>";
+          }
+          var message_text = "<h2>" + preface_label + "&nbsp;&nbsp;" + message + "</h2>";
+          messageElem.innerHTML = message_text;
+          messages.appendChild(messageElem);
+        }
+
+        channel.bind('message', function(data) {
+            appendLog(data.nickname, data.message);
+            console.log("ID: [%s] = %s", data.id, data.message);
+        });
+
+        channel.bind('nickname', function(data) {
+            appendLog('*', data.message);
+        });
+
+
+        pusher.connection.bind('disconnected', function() {
+            appendLog('*', 'Connection closed');
+            console.log('Connection closed');
+        });
+
+        function sendMessage() {
+            var messageField = document.getElementById('message');
+            var message = messageField.value;
+            if(message.indexOf('/nick') === 0) {
+                var nickname_array = message.split(' ');
+                if(nickname_array.length >= 2) {
+                    $.ajax({
+                        url: 'http://localhost:8181/nickname',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            id: id,
+                            nickname: nickname_array[1]
+                        }),
+                        contentType: "application/json",                    
+                        complete: function(xhr, status) {
+                            if(xhr.status === 200) {
+                                console.log("message sent");
+                            }
+                        }
+                    });
+                }
+            } else {
+                $.ajax({
+                    url: 'http://localhost:8181/chat',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        id: id,
+                        message: messageField.value
+                    }),
+                    contentType: "application/json",                    
+                    complete: function(xhr, status) {
+                        if(xhr.status === 200) {
+                            console.log("message sent");
+                        }
+                    }
+                })
+            }
+            messageField.value = '';
+            messageField.focus();
+        }
+
+        function disconnect() {
+            pusher.disconnect();
+        }
+
+    </script>
+</head>
+<body lang="en">
+    <div class="vertical-center">
+    <div class="container">
+    <ul id="messages" class="list-unstyled">
+
+    </ul>
+    <hr />
+    <form role="form" id="chat_form" onsubmit="sendMessage(); return false;">
+        <div class="form-group">
+        <input class="form-control" type="text" name="message" id="message"
+          placeholder="Type text to echo in here" value="" autofocus/>
+        </div>
+        <button type="button" id="send" class="btn btn-primary" onclick="sendMessage();">Send Message</button>
+        <input type="button" value="Disconnect" class="btn btn-danger" onclick="disconnect();" />
+  </form>
+  </div>
+  </div>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</body>
+</html>
